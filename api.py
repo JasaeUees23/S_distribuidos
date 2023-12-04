@@ -9,9 +9,9 @@ TRANSACTIONS_FILE = ''
 
 app = Flask(_name_)
 
-#Al iniciarse:
-#1. Actualizar su archivo de lideres
-#2. Si no es lider, ponerse al dia con el lider
+# Al iniciarse:
+# 1. Actualizar su archivo de lideres
+# 2. Si no es lider, ponerse al dia con el lider, s dcir comunicación de los nodos con el líder
 
 def updateLeadersFile():
     try:
@@ -40,19 +40,13 @@ def updateLeadersFile():
             
             #Verificar si el lider segun el archivo en realidad es el lider
     except FileNotFoundError as e:
-        #Si no hay archivo (es un nuevo nodo), se requiere ingresar la ip de cualquier nodo
+        # Si no hay archivo (es un nuevo nodo), se requiere ingresar la ip de cualquier nodo
         ip = input('No se ha encontrado el archivo de líderes. Indique la IP del líder o de cualquier nodo:')
-        #Si la ip que se ingresa es la misma de este nodo, entonces es el lider
+        # Si la ip que se ingresa es la misma de este nodo, entonces es el lider
 
-        #Si no conectarse a la ip y obtener el archivo de lideres
+        # Si no conectarse a la ip y obtener el archivo de lideres
     except Exception as e: 
         print(e)
-
-in_memory_datastore = {
-   "COBOL" : {"name": "COBOL", "publication_year": 1960, "contribution": "record data"},
-   "ALGOL" : {"name": "ALGOL", "publication_year": 1958, "contribution": "scoping and nested functions"},
-   "APL" : {"name": "APL", "publication_year": 1962, "contribution": "array processing"},
-}
 
 @app.get('/forms')
 def list_forms():
