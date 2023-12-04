@@ -9,44 +9,76 @@ TRANSACTIONS_FILE = ''
 
 app = Flask(_name_)
 
-# Al iniciarse:
-# 1. Actualizar su archivo de lideres
-# 2. Si no es lider, ponerse al dia con el lider, s dcir comunicación de los nodos con el líder
+#Al iniciarse:
+#1. Actualizar su archivo de lideres
+#2. Si no es lider, ponerse al dia con el lider
 
-def updateLeadersFile():
+def read_file(filename):
     try:
-        with open(LEADERS_FILE, 'r') as leaders_file:
-            #Verificar el lider conectandose a cualquier nodo (al primero que responda)
-            leaders_data = json.load(leaders_file)
-            nodes = []            
-            for value in leaders_data.values():
-                nodes += value
-            nodes_json = None
-            for node in filter(lambda node: node != CURRENT_IP, nodes):
-                try:
-                    x = requests.get('http://{}:5000/leaders'.format(node))
-                    data = x.json()
-                    json_object = json.dumps(data, indent=4)
-                    #Actualizar archivo
-                    with open(LEADERS_FILE, "w") as outfile:
-                        outfile.write(json_object)
-                        print("Archivo de lideres actualizado")
-                    break
-                except Exception as e:
-                    print("Nodo no disponible: {}".format(node))
-                    print(e)
-                    continue
-
-            
-            #Verificar si el lider segun el archivo en realidad es el lider
+        with open(filename, 'r') as file:
+            return json.load(file)      
     except FileNotFoundError as e:
-        # Si no hay archivo (es un nuevo nodo), se requiere ingresar la ip de cualquier nodo
-        ip = input('No se ha encontrado el archivo de líderes. Indique la IP del líder o de cualquier nodo:')
-        # Si la ip que se ingresa es la misma de este nodo, entonces es el lider
-
-        # Si no conectarse a la ip y obtener el archivo de lideres
+        return False
     except Exception as e: 
         print(e)
+    
+def write_file(filename, data):
+    try:
+        with open(filename, "w") as outfile:
+            outfile.write(data)
+        return True
+    except Exception as e:
+        print("Error al grabar. {}".format(e))
+        return False
+
+def getLocalLeadersList():
+    leaders_data = read_file(LEADERS_FILE)
+    if leaders_data:
+        nodes = []            
+        for value in leaders_data.values():
+            nodes += value
+        return nodes
+    else:
+        #Si no hay archivo (es un nuevo nodo), se requiere ingresar la ip de cualquier nodo
+        ip = input('No se ha encontrado el archivo de líderes. Indique la IP del líder o de cualquier nodo:')
+        #Si la ip que se ingresa es la misma de este nodo, entonces es el lider y se debe crear el archivo
+        if ip == CURRENT_IP:
+            leaders_data = {"L":"{}".format(CURRENT_IP)}
+            write_ok = write_file(LEADERS_FILE, leaders_data)
+            if write_ok:
+                print("Archivo de lideres actualizado")
+        #Si no conectarse a la ip y obtener el archivo de lideres
+
+def getRemoteLeadersFile(node):
+    try:
+        req = requests.get('http://{}:5000/leaders'.format(node))
+        json_object = json.dumps(req.json(), indent=4)
+        #Actualizar archivo
+        with open(LEADERS_FILE, "w") as outfile:
+            outfile.write(json_object)
+            print("Archivo de lideres actualizado")
+        return True
+    except:
+        print("Nodo no disponible: {}".format(node))
+        return False
+
+
+
+def updateFiles():
+    #Verificar el lider conectandose a cualquier nodo del archivo local (al primero que responda)
+    leaders_list = getLocalLeadersList()
+    file_saved = False
+    for node in filter(lambda node: node != CURRENT_IP, nodes):
+        if getRemoteLeadersFile(node):
+            file_saved = True
+            break
+    if not file_saved:  
+
+in_memory_datastore = {
+   "COBOL" : {"name": "COBOL", "publication_year": 1960, "contribution": "record data"},
+   "ALGOL" : {"name": "ALGOL", "publication_year": 1958, "contribution": "scoping and nested functions"},
+   "APL" : {"name": "APL", "publication_year": 1962, "contribution": "array processing"},
+}
 
 @app.get('/forms')
 def list_forms():
@@ -77,7 +109,8 @@ def get_form_by_id(form_id):
 def leaders_route():
     with open(LEADERS_FILE, 'r') as leaders_file:
         leaders_data = json.load(leaders_file)
+        #TODO: Guardar el nodo que hace la solicitud
         return leaders_data
 
 print("IP ACTUAL: {}".format(CURRENT_IP))
-updateLeadersFile()
+updateFiles()
