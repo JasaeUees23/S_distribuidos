@@ -98,6 +98,8 @@ def become_leader():
     nodes_data = read_json_file(NODES_FILE)
     nodes_data['N'].append(nodes_data['L'][0])
     nodes_data['L'] = ["{}".format(CURRENT_IP)]
+    if write_json_file(NODES_FILE, nodes_data):
+        print("Este nodo ahora es lider.")
 
 def send_update_requests():
     nodes_list = getLocalNodesList()
