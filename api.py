@@ -114,6 +114,23 @@ def send_update_requests():
 #ROUTES DE LIDER#
 #################
 
+@app.get('/report')
+def report_route():
+    key = request.args.get('key')
+    value = request.args.get('value') 
+    print(key)
+    print(value)
+    if not key or not value:
+        return make_response({'code':'ERROR','message':'Faltan parametros'}, 500)
+    data = list(
+        filter(
+            lambda form: form[key] == value,
+            read_json_file(FORMS_FILE).values()
+        )
+    )
+
+    return make_response({'code':'SUCCESS','data':data}, 201)
+
 @app.route('/forms', methods=['GET', 'POST'])
 def forms_route():
     if request.method == 'GET':
