@@ -6,6 +6,7 @@ import requests
 CURRENT_IP = ni.ifaddresses('enp0s3')[ni.AF_INET][0]['addr']
 NODES_FILE = '/home/aialejandro/modulo_almacenamiento/leaders.json'
 FORMS_FILE = '/home/aialejandro/modulo_almacenamiento/forms.json'
+LOG_FILE = '/home/aialejandro/modulo_almacenamiento/log.txt'
 MIN_REPLICATIONS = 1
 
 TYPES = {
@@ -166,12 +167,16 @@ def forms_route():
                 forms_data[received_data['cedula']] = received_data
                 data_to_save = forms_data
             if write_json_file(FORMS_FILE, data_to_save):
+                with open(LOG_FILE,"a+") as f:
+                    f.write('Formulario {} guardado.\n'.format(received_data['cedula']))
                 print('Formulario {} guardado.'.format(received_data['cedula']))
                 #Enviar a todos los nodos a replicarse
                 replications = send_update_requests()
                 if replications >= MIN_REPLICATIONS:
+                    print(f'Replicado {replications} veces.')
                     return make_response({'code':'SUCCESS','message':'Formulario {} guardado.'.format(received_data['cedula'])}, 201)
                 else:
+                    print(f'No se ha replicado suficientes veces ({MIN_REPLICATIONS})')
                     return make_response({'code':'ERROR','message':'No hubo suficientes replicaciones'}, 500)
         else:
             try:
@@ -235,6 +240,8 @@ def update_from_leader_route():
         return make_response({'code':'ERROR','message':'Error actualizando archivo de nodos'}, 500)
     if not getRemoteFile(leader, 'forms'):
         return make_response({'code':'ERROR','message':'Error actualizando archivo de formularios'}, 500)
+    with open(LOG_FILE,"a+") as f:
+        f.write(f'Actualizado desde el lider {request.remote_addr}.\n')
     return make_response({'code':'SUCCESS','message':'Nodo actualizado'}, 201)
 
 #########
