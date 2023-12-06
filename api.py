@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, make_response
 import json
 import netifaces as ni
 import requests
+from datetime import datetime
 
 CURRENT_IP = ni.ifaddresses('enp0s3')[ni.AF_INET][0]['addr']
 NODES_FILE = '/home/aialejandro/modulo_almacenamiento/leaders.json'
@@ -169,7 +170,7 @@ def forms_route():
                 data_to_save = forms_data
             if write_json_file(FORMS_FILE, data_to_save):
                 with open(LOG_FILE,"a+") as f:
-                    f.write('Formulario {} guardado.\n'.format(received_data['cedula']))
+                    f.write('{datetime.now()} - Formulario {} guardado.\n'.format(received_data['cedula']))
                 print('Formulario {} guardado.'.format(received_data['cedula']))
                 #Enviar a todos los nodos a replicarse
                 replications = send_update_requests()
@@ -242,7 +243,7 @@ def update_from_leader_route():
     if not getRemoteFile(leader, 'forms'):
         return make_response({'code':'ERROR','message':'Error actualizando archivo de formularios'}, 500)
     with open(LOG_FILE,"a+") as f:
-        f.write(f'Actualizado desde el lider {request.remote_addr}.\n')
+        f.write(f'{datetime.now()} - Actualizado desde el lider {request.remote_addr}.\n')
     return make_response({'code':'SUCCESS','message':'Nodo actualizado'}, 201)
 
 #########
