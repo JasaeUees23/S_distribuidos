@@ -111,6 +111,8 @@ def send_update_requests():
                 req = requests.get('http://{}:5000/updatenode'.format(node), timeout=2)
                 if req.status_code == 200:
                     replications += 1
+                else:
+                    print(req.message)
             except Exception as e:
                 print("Nodo no disponible: {}".format(node))
     return replications
