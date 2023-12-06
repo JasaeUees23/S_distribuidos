@@ -109,7 +109,7 @@ def send_update_requests():
         for node in list(filter(lambda node: node != CURRENT_IP, nodes_list)):
             try:
                 req = requests.get('http://{}:5000/updatenode'.format(node), timeout=2)
-                if req.status_code == 200:
+                if req.status_code == 201:
                     replications += 1
                 else:
                     print(req.message)
