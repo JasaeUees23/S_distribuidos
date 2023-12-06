@@ -6,6 +6,7 @@ import requests
 CURRENT_IP = ni.ifaddresses('enp0s3')[ni.AF_INET][0]['addr']
 NODES_FILE = '/home/aialejandro/modulo_almacenamiento/leaders.json'
 FORMS_FILE = '/home/aialejandro/modulo_almacenamiento/forms.json'
+MIN_REPLICATIONS = 1
 
 TYPES = {
     'nodes': NODES_FILE,
@@ -103,12 +104,16 @@ def become_leader():
 
 def send_update_requests():
     nodes_list = getLocalNodesList()
+    replications = 0
     if nodes_list:
         for node in list(filter(lambda node: node != CURRENT_IP, nodes_list)):
             try:
                 req = requests.get('http://{}:5000/updatenode'.format(node), timeout=2)
+                if req.status_code == 200:
+                    replications += 1
             except Exception as e:
                 print("Nodo no disponible: {}".format(node))
+    return replications
 
 #################
 #ROUTES DE LIDER#
@@ -117,17 +122,26 @@ def send_update_requests():
 @app.get('/report')
 def report_route():
     key = request.args.get('key')
-    value = request.args.get('value') 
-    print(key)
-    print(value)
+    value = request.args.get('value')
+    condition = request.args.get('condition') 
     if not key or not value:
         return make_response({'code':'ERROR','message':'Faltan parametros'}, 500)
-    data = list(
-        filter(
-            lambda form: form[key] == value,
-            read_json_file(FORMS_FILE).values()
+
+    if condition:
+        int_value = int(value)
+        data = list(
+            filter(
+                lambda form: eval(f"form['{key}'] {condition} {int_value}"),
+                read_json_file(FORMS_FILE).values()
+            )
+        )    
+    else:
+        data = list(
+            filter(
+                lambda form: form[key] == value,
+                read_json_file(FORMS_FILE).values()
+            )
         )
-    )
 
     return make_response({'code':'SUCCESS','data':data}, 201)
 
@@ -151,9 +165,12 @@ def forms_route():
                 data_to_save = forms_data
             if write_json_file(FORMS_FILE, data_to_save):
                 print('Formulario {} guardado.'.format(received_data['cedula']))
-                return make_response({'code':'SUCCESS','message':'Formulario {} guardado.'.format(received_data['cedula'])}, 201)
-            #Enviar a todos los nodos a replicarse
-            send_update_requests()
+                #Enviar a todos los nodos a replicarse
+                replications = send_update_requests()
+                if replications >= MIN_REPLICATIONS:
+                    return make_response({'code':'SUCCESS','message':'Formulario {} guardado.'.format(received_data['cedula'])}, 201)
+                else:
+                    return make_response({'code':'ERROR','message':'No hubo suficientes replicaciones'}, 500)
         else:
             try:
                 req = requests.post('http://{}:5000/forms'.format(leader), json=received_data, timeout=2)
@@ -162,9 +179,11 @@ def forms_route():
                 print("Lider no disponible: {}".format(leader))
                 #Convertirse en lider, grabar y decirle a todos que graben
                 become_leader()
-                send_update_requests()
-                return make_response({'code':'SUCCESS','message':'Formulario {} guardado.'.format(received_data['cedula'])}, 201)
-
+                replications = send_update_requests()
+                if replications >= MIN_REPLICATIONS:
+                    return make_response({'code':'SUCCESS','message':'Formulario {} guardado.'.format(received_data['cedula'])}, 201)
+                else:
+                    return make_response({'code':'ERROR','message':'No hubo suficientes replicaciones'}, 500)
 
         
 @app.route('/forms/<form_id>')
